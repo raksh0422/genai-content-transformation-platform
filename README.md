@@ -3,7 +3,7 @@
 [![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://genai-content-transformation-platform.vercel.app)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/raksh0422/genai-content-transformation-platform)
 
-> 🌐 **Live Demo (Vercel)**: [https://genai-content-transformation-platform.vercel.app](https://genai-content-transformation-platform.vercel.app)  
+> 🌐 **Live Demo (Vercel)**: [genai-content-transformation-platfo-eta.vercel.app](https://genai-content-transformation-platfo-eta.vercel.app/)
 > **Enterprise AI Document Intelligence, Grounded RAG Transformations, & Factuality Audit SaaS**  
 > **Backend**: FastAPI + PostgreSQL + FAISS Vector Search + Pydantic + Tiktoken  
 > **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS + Modern SaaS Design System
