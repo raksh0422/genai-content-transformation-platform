@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_log_level: str = "INFO"
 
-    # Database
-    database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/genai_platform"
+    # Database (defaults to SQLite; overridable via DATABASE_URL env var for PostgreSQL/Neon/Supabase)
+    database_url: str = "sqlite+aiosqlite:///./uploads/genai_platform.db"
 
     # File Upload & Vector Index Storage
     upload_dir: Path = Path("./uploads")
