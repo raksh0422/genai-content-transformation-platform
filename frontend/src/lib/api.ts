@@ -136,10 +136,25 @@ export interface VerificationReportResponse {
   claims: VerifiedClaimData[];
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const RAW_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+export const API_BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, init);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, init);
+  } catch (err: unknown) {
+    const isBrowser = typeof window !== "undefined";
+    const isNotLocal = isBrowser && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+    if (isNotLocal && API_BASE_URL.includes("localhost")) {
+      throw new Error(
+        `Unable to reach backend: The app is deployed at ${window.location.origin}, but NEXT_PUBLIC_API_URL is still pointing to "${API_BASE_URL}". Please set NEXT_PUBLIC_API_URL in your Vercel Project Settings to your deployed backend URL and redeploy.`
+      );
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Unable to fetch from API (${API_BASE_URL}): ${msg}. Ensure your backend server is deployed and running.`);
+  }
+
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
     try {

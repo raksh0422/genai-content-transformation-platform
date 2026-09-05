@@ -52,6 +52,7 @@ export default function DashboardPage() {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [recentTransformations, setRecentTransformations] = useState<TransformationResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +62,7 @@ export default function DashboardPage() {
         const docsRes = await api.listDocuments(100, 0);
         if (!active) return;
         setDocuments(docsRes.items);
+        setError(null);
 
         const completedDocs = docsRes.items.filter((d) => d.status === "completed");
         const tfPromises = completedDocs.slice(0, 10).map((d) =>
@@ -77,6 +79,9 @@ export default function DashboardPage() {
         setRecentTransformations(allTfs);
       } catch (err) {
         console.error("Dashboard load error:", err);
+        if (active) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -110,6 +115,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 max-w-4xl animate-fade-in">
+      {error && (
+        <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-sm flex items-start gap-3 shadow-sm">
+          <svg className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <p className="font-semibold">Backend Connection Notice</p>
+            <p className="text-xs text-amber-800 mt-1 leading-relaxed">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="relative overflow-hidden surface-card p-6 bg-black text-white bg-dot-pattern-dark border border-zinc-800">
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

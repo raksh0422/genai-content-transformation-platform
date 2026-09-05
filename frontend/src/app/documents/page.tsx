@@ -47,6 +47,7 @@ function StatusBadge({ status }: { status: DocumentMetadata["status"] }) {
 export default function DocumentLibraryPage() {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"newest" | "name" | "size">("newest");
@@ -57,8 +58,17 @@ export default function DocumentLibraryPage() {
   useEffect(() => {
     let active = true;
     api.listDocuments(100, 0)
-      .then((res) => { if (active) setDocuments(res.items); })
-      .catch(console.error)
+      .then((res) => {
+        if (active) {
+          setDocuments(res.items);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -94,6 +104,18 @@ export default function DocumentLibraryPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <ToastContainer />
+
+      {error && (
+        <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-sm flex items-start gap-3 shadow-sm">
+          <svg className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <p className="font-semibold">Backend Connection Notice</p>
+            <p className="text-xs text-amber-800 mt-1 leading-relaxed">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

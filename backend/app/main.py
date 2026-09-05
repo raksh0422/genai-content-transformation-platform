@@ -51,14 +51,24 @@ def create_app() -> FastAPI:
     # Add Rate Limiter Middleware
     app.add_middleware(RateLimiterMiddleware, max_requests=200, window_seconds=60)
 
-    # CORS — allow local dev and production origins
+    # CORS — allow local dev, vercel domains, and configured origins
+    import os
+    cors_env = os.getenv("CORS_ORIGINS", "")
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+    ]
+    if cors_env:
+        for orig in cors_env.split(","):
+            orig_clean = orig.strip()
+            if orig_clean and orig_clean not in allowed_origins:
+                allowed_origins.append(orig_clean)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "https://*.vercel.app",
-        ],
+        allow_origins=allowed_origins,
+        allow_origin_regex=r"https://.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
