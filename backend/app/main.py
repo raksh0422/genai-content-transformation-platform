@@ -74,8 +74,33 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Mount API router
+    # Root health endpoint
+    @app.get("/", tags=["health"])
+    async def root():
+        return {
+            "status": "ok",
+            "message": "GenAI Content Transformation Platform API is running.",
+            "version": "3.0.0",
+            "docs": "/docs",
+        }
+
+    # Mount API router under /api/v1
     app.include_router(v1_router)
+
+    # Also mount routers directly at root for resilience if clients omit /api/v1
+    from app.api.v1.endpoints.health import router as health_router
+    from app.api.v1.endpoints.documents import router as documents_router
+    from app.api.v1.endpoints.retrieval import router as retrieval_router
+    from app.api.v1.endpoints.transformations import router as transformations_router
+    from app.api.v1.endpoints.verification import router as verification_router
+    from app.api.v1.endpoints.tools import router as tools_router
+
+    app.include_router(health_router)
+    app.include_router(documents_router)
+    app.include_router(retrieval_router)
+    app.include_router(transformations_router)
+    app.include_router(verification_router)
+    app.include_router(tools_router)
 
     return app
 

@@ -136,8 +136,17 @@ export interface VerificationReportResponse {
   claims: VerifiedClaimData[];
 }
 
-const RAW_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-export const API_BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
+function normalizeApiBaseUrl(inputUrl?: string): string {
+  let url = (inputUrl ?? "http://localhost:8000/api/v1").trim().replace(/\/+$/, "");
+  // If user provided a domain without /api/v1 (e.g. https://my-backend.onrender.com),
+  // ensure /api/v1 is appended so standard REST endpoints route correctly.
+  if (!url.endsWith("/api/v1")) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -162,6 +171,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       detail = body.detail ?? detail;
     } catch {
       /* ignore */
+    }
+    if (res.status === 404) {
+      throw new Error(
+        `Route not found (HTTP 404) at ${API_BASE_URL}${path}. Verify that your backend is up and running.`
+      );
     }
     throw new Error(detail);
   }
