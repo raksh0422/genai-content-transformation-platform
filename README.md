@@ -1,8 +1,12 @@
 # ContentAI — GenAI Content Transformation & Verification Platform
 
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://genai-content-transformation-platform.vercel.app)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/raksh0422/genai-content-transformation-platform)
+
+> 🌐 **Live Demo (Vercel)**: [https://genai-content-transformation-platform.vercel.app](https://genai-content-transformation-platform.vercel.app)  
 > **Enterprise AI Document Intelligence, Grounded RAG Transformations, & Factuality Audit SaaS**  
 > **Backend**: FastAPI + PostgreSQL + FAISS Vector Search + Pydantic + Tiktoken  
-> **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind CSS + Modern SaaS Design System
+> **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS + Modern SaaS Design System
 
 ---
 
@@ -109,6 +113,22 @@ npm install
 npm run dev
 ```
 > **SaaS Workspace**: `http://localhost:3000`
+
+---
+
+## 🌐 Deploying Frontend to Vercel
+
+1. Log in to [Vercel](https://vercel.com/) with your GitHub account.
+2. Click **Add New...** → **Project**.
+3. Import `raksh0422/genai-content-transformation-platform`.
+4. **Important Setting**:
+   - **Root Directory**: Click `Edit` and select `frontend`.
+   - **Framework Preset**: `Next.js` (automatically detected).
+5. **Environment Variables**:
+   - Add `NEXT_PUBLIC_API_URL` pointing to your deployed backend API URL (or leave default for local proxy).
+6. Click **Deploy**.
+7. Once deployed, your app will be live at:
+   👉 **`https://genai-content-transformation-platform.vercel.app`**
 
 ---
 
