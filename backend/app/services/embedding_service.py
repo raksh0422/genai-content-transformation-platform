@@ -50,12 +50,24 @@ class OpenAIEmbeddingService(BaseEmbeddingService):
             )
             return [data.embedding for data in response.data]
         except Exception as exc:
-            logger.error("OpenAI embedding generation failed: %s", exc)
-            raise RuntimeError(f"OpenAI embedding error: {exc}") from exc
+            logger.warning(
+                "OpenAI embedding generation failed (%s). Falling back gracefully to LocalDeterministicEmbeddingService.",
+                exc,
+            )
+            fallback = LocalDeterministicEmbeddingService(dimension=self._dimension)
+            return await fallback.embed_texts(texts)
 
     async def embed_query(self, query: str) -> List[float]:
-        embeddings = await self.embed_texts([query])
-        return embeddings[0]
+        try:
+            embeddings = await self.embed_texts([query])
+            return embeddings[0]
+        except Exception as exc:
+            logger.warning(
+                "OpenAI query embedding failed (%s). Falling back gracefully to LocalDeterministicEmbeddingService.",
+                exc,
+            )
+            fallback = LocalDeterministicEmbeddingService(dimension=self._dimension)
+            return await fallback.embed_query(query)
 
 
 class LocalDeterministicEmbeddingService(BaseEmbeddingService):

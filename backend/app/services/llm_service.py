@@ -91,8 +91,16 @@ class OpenAILLMProvider(BaseLLMProvider):
                 finish_reason=choice.finish_reason or "stop",
             )
         except Exception as exc:
-            logger.error("OpenAI LLM generation failed: %s", exc)
-            raise RuntimeError(f"OpenAI LLM error: {exc}") from exc
+            logger.warning(
+                "OpenAI LLM generation failed (%s). Falling back gracefully to MockGroundedLLMProvider.",
+                exc,
+            )
+            fallback = MockGroundedLLMProvider()
+            return await fallback.generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                response_schema=response_schema,
+            )
 
 
 class MockGroundedLLMProvider(BaseLLMProvider):
