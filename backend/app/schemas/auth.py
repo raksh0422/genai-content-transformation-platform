@@ -42,6 +42,11 @@ class UserLoginRequest(BaseModel):
     def clean_email(cls, v: str) -> str:
         return v.strip().lower()
 
+    @field_validator("password")
+    @classmethod
+    def clean_password(cls, v: str) -> str:
+        return v.strip()
+
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

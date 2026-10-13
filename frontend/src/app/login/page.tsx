@@ -38,7 +38,7 @@ export default function LoginPage() {
     try {
       const res = await api.login({
         email: email.trim(),
-        password,
+        password: password.trim(),
         remember_me: rememberMe,
       });
 
@@ -113,6 +113,51 @@ export default function LoginPage() {
                 <span>Authentication successful. Opening workspace…</span>
               </div>
             )}
+
+            {/* Quick-fill Expo demo accounts */}
+            <div className="rounded-xl border border-[#E4E8E3] bg-[#F8F9F7] p-3 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-[#69736C] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#315B46]" />
+                  Expo Demo Accounts
+                </span>
+                <span className="text-[10px] text-[#8C958F]">Click card to autofill</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  id="fill-demo-admin"
+                  onClick={() => {
+                    setEmail("admin@contentai.internal");
+                    setPassword("AdminPass123!");
+                    setError(null);
+                  }}
+                  className="flex flex-col text-left p-2.5 rounded-lg bg-white border border-[#E4E8E3] hover:border-[#315B46] hover:bg-[#EBF1ED]/40 transition-colors cursor-pointer"
+                >
+                  <span className="font-bold text-[#315B46] text-xs flex items-center gap-1">
+                    <span>👑</span> Administrator
+                  </span>
+                  <span className="text-[11px] text-[#202522] font-mono mt-0.5 truncate">admin@contentai.internal</span>
+                  <span className="text-[10px] text-[#69736C] font-mono">AdminPass123!</span>
+                </button>
+                <button
+                  type="button"
+                  id="fill-demo-user"
+                  onClick={() => {
+                    setEmail("jane@example.com");
+                    setPassword("UserPass123!");
+                    setError(null);
+                  }}
+                  className="flex flex-col text-left p-2.5 rounded-lg bg-white border border-[#E4E8E3] hover:border-[#315B46] hover:bg-[#EBF1ED]/40 transition-colors cursor-pointer"
+                >
+                  <span className="font-bold text-[#202522] text-xs flex items-center gap-1">
+                    <span>👤</span> Regular User
+                  </span>
+                  <span className="text-[11px] text-[#202522] font-mono mt-0.5 truncate">jane@example.com</span>
+                  <span className="text-[10px] text-[#69736C] font-mono">UserPass123!</span>
+                </button>
+              </div>
+            </div>
 
             {/* Email Field */}
             <div>
