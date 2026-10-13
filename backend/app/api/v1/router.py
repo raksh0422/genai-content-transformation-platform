@@ -7,6 +7,8 @@ from app.api.v1.endpoints.retrieval import router as retrieval_router
 from app.api.v1.endpoints.transformations import router as transformations_router
 from app.api.v1.endpoints.verification import router as verification_router
 from app.api.v1.endpoints.tools import router as tools_router
+from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.admin import router as admin_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(health_router)
@@ -15,4 +17,6 @@ router.include_router(retrieval_router)
 router.include_router(transformations_router)
 router.include_router(verification_router)
 router.include_router(tools_router)
+router.include_router(auth_router)
+router.include_router(admin_router)
 

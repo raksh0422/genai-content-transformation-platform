@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
-  title: "ContentAI — Document Intelligence",
-  description: "Transform your documents into summaries, FAQs, quizzes, emails, and more.",
+  title: "ContentAI — GenAI Platform for Automated Content Transformation",
+  description: "Enterprise GenAI platform for grounded document intelligence, transformations, and administrative analytics.",
 };
 
 export default function RootLayout({
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

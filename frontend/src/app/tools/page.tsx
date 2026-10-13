@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   api,
   type PlagiarismResponse,
@@ -8,18 +9,18 @@ import {
   type HumanizeResponse,
 } from "@/lib/api";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Score Dial Component ───────────────────────────────────────────────────
 
 function ScoreRing({ score, label, size = 80 }: { score: number; label: string; size?: number }) {
   const r = (size / 2) * 0.78;
   const circumference = 2 * Math.PI * r;
   const progress = circumference - (score / 100) * circumference;
-  const color = score >= 70 ? "#ef4444" : score >= 40 ? "#f59e0b" : "#22c55e";
+  const color = score >= 70 ? "#A83232" : score >= 40 ? "#9A6B1F" : "#2E6A4F";
 
   return (
     <div className="flex flex-col items-center gap-1.5">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#27272a" strokeWidth={6} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E4E8E3" strokeWidth={6} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -34,8 +35,8 @@ function ScoreRing({ score, label, size = 80 }: { score: number; label: string; 
         />
       </svg>
       <div className="text-center" style={{ marginTop: -size * 0.02 }}>
-        <p className="text-lg font-extrabold text-white font-mono leading-none">{score}%</p>
-        <p className="text-[10px] font-mono text-zinc-400 uppercase mt-0.5">{label}</p>
+        <p className="text-lg font-bold text-[#202522] font-mono leading-none">{score}%</p>
+        <p className="text-[10px] uppercase font-semibold text-[#69736C] mt-1">{label}</p>
       </div>
     </div>
   );
@@ -43,28 +44,28 @@ function ScoreRing({ score, label, size = 80 }: { score: number; label: string; 
 
 function SignalBadge({ signal }: { signal: string }) {
   const map: Record<string, string> = {
-    repetitive: "bg-red-950 text-red-300 border-red-900",
-    formulaic: "bg-amber-950 text-amber-300 border-amber-900",
-    structural: "bg-zinc-800 text-zinc-300 border-zinc-700",
+    repetitive: "bg-[#FDF2F2] text-[#A83232] border-[#A83232]/30",
+    formulaic: "bg-[#FEF7EC] text-[#9A6B1F] border-[#9A6B1F]/30",
+    structural: "bg-[#F8F9F7] text-[#69736C] border-[#E4E8E3]",
   };
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono border ${map[signal] ?? "bg-zinc-800 text-zinc-300 border-zinc-700"}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${map[signal] ?? "bg-[#F8F9F7] text-[#69736C] border-[#E4E8E3]"}`}>
       {signal.toUpperCase()}
     </span>
   );
 }
 
 function StatBar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
-  const pct = Math.round((value / max) * 100);
+  const pct = Math.min(100, Math.round((value / max) * 100));
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-[11px] font-mono">
-        <span className="text-zinc-400">{label}</span>
-        <span className="text-white font-bold">{value.toFixed(1)}</span>
+      <div className="flex justify-between text-[11px]">
+        <span className="text-[#69736C] font-medium">{label}</span>
+        <span className="text-[#202522] font-bold font-mono">{value.toFixed(1)}</span>
       </div>
-      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-[#F0F2EF] rounded-full overflow-hidden border border-[#E4E8E3]">
         <div
-          className="h-full bg-white rounded-full transition-all duration-700"
+          className="h-full bg-[#315B46] rounded-full transition-all duration-700"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -72,11 +73,12 @@ function StatBar({ label, value, max = 100 }: { label: string; value: number; ma
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// ─── Main Content Wrapper ───────────────────────────────────────────────────
 
 type ActiveTool = "plagiarism" | "humanize";
 
-export default function ToolsPage() {
+function ToolsContent() {
+  const searchParams = useSearchParams();
   const [activeTool, setActiveTool] = useState<ActiveTool>("plagiarism");
 
   // Plagiarism state
@@ -96,10 +98,28 @@ export default function ToolsPage() {
 
   const humanizedRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Plagiarism ─────────────────────────────────────────────────────────
+  // Check URL query parameters and sessionStorage for preloaded text
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "humanize" || tabParam === "plagiarism") {
+      setActiveTool(tabParam);
+    }
+
+    const prefill = sessionStorage.getItem("contentai_tool_prefill");
+    if (prefill) {
+      if (tabParam === "humanize") {
+        setHumanText(prefill);
+      } else {
+        setPlagText(prefill);
+      }
+      sessionStorage.removeItem("contentai_tool_prefill");
+    }
+  }, [searchParams]);
+
+  // ── Plagiarism Handler ──────────────────────────────────────────────────
   async function handlePlagiarismCheck() {
     if (!plagText.trim() || plagText.trim().length < 20) {
-      setPlagError("Please paste at least 20 characters of text.");
+      setPlagError("Please paste at least 20 characters of text to scan.");
       return;
     }
     setPlagLoading(true);
@@ -115,10 +135,10 @@ export default function ToolsPage() {
     }
   }
 
-  // ── Humanize ──────────────────────────────────────────────────────────
+  // ── Humanize Handler ───────────────────────────────────────────────────
   async function handleHumanize() {
     if (!humanText.trim() || humanText.trim().length < 20) {
-      setHumanError("Please paste at least 20 characters of text.");
+      setHumanError("Please paste at least 20 characters of text to humanize.");
       return;
     }
     setHumanLoading(true);
@@ -143,80 +163,82 @@ export default function ToolsPage() {
 
   const verdictColor =
     plagResult && plagResult.overall_score >= 70
-      ? "text-red-400"
+      ? "text-[#A83232]"
       : plagResult && plagResult.overall_score >= 40
-      ? "text-amber-400"
-      : "text-green-400";
+      ? "text-[#9A6B1F]"
+      : "text-[#2E6A4F]";
 
   return (
-    <div className="space-y-6 max-w-4xl animate-fade-in">
+    <div className="space-y-6 max-w-5xl animate-fade-in pb-12 font-sans">
       {/* Page Header */}
-      <div className="relative overflow-hidden surface-card p-6 bg-black text-white bg-dot-pattern-dark border border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-[10px] font-mono uppercase tracking-wider text-zinc-300 mb-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-              AI Text Analysis Suite
-            </div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Text Intelligence Tools</h1>
-            <p className="text-xs text-zinc-400 mt-1 max-w-lg">
-              Detect AI-generated content with precision signal analysis, or instantly rewrite text to sound authentically human.
-            </p>
+      <div className="p-6 bg-white border border-[#E4E8E3] rounded-xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#EBF1ED] border border-[#2E6A4F]/20 text-[11px] font-semibold text-[#2E6A4F] mb-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#2E6A4F] animate-pulse" />
+            Originality & Rewrite Suite
           </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#202522]">
+            Plagiarism & AI Content Tools
+          </h1>
+          <p className="text-xs text-[#69736C] mt-1 max-w-xl leading-relaxed">
+            Verify authenticity, detect formulaic AI phrasing, and transform robotic drafts into natural human prose.
+          </p>
         </div>
       </div>
 
       {/* Tool Selector Tabs */}
-      <div className="flex gap-2 p-1 bg-zinc-100 border border-zinc-200 rounded-lg w-full sm:w-fit">
+      <div className="flex gap-2 p-1 bg-white border border-[#E4E8E3] rounded-lg shadow-xs w-full sm:w-fit">
         <button
           type="button"
           onClick={() => setActiveTool("plagiarism")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all duration-150 ${
+          id="tab-plagiarism"
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold transition-all duration-150 ${
             activeTool === "plagiarism"
-              ? "bg-black text-white shadow-md"
-              : "text-zinc-500 hover:text-zinc-900"
+              ? "bg-[#315B46] text-white shadow-xs"
+              : "text-[#69736C] hover:text-[#202522]"
           }`}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
           </svg>
-          Plagiarism Checker
+          <span>Plagiarism & AI Detector</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTool("humanize")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all duration-150 ${
+          id="tab-humanize"
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold transition-all duration-150 ${
             activeTool === "humanize"
-              ? "bg-black text-white shadow-md"
-              : "text-zinc-500 hover:text-zinc-900"
+              ? "bg-[#315B46] text-white shadow-xs"
+              : "text-[#69736C] hover:text-[#202522]"
           }`}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
           </svg>
-          Humanize Text
+          <span>AI Content Humanizer</span>
         </button>
       </div>
 
       {/* ── PLAGIARISM CHECKER ─────────────────────────────────────────── */}
       {activeTool === "plagiarism" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Left: Input Panel */}
-          <div className="surface-card p-5 space-y-4 border border-zinc-200">
+          <div className="bg-white border border-[#E4E8E3] rounded-xl p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-mono font-bold text-zinc-400 uppercase">Input Text</p>
-              <span className="text-[10px] font-mono text-zinc-500">{plagText.length} chars</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#69736C]">Input Text</p>
+              <span className="text-[11px] font-mono text-[#8C958E]">{plagText.length} characters</span>
             </div>
             <textarea
               id="plagiarism-input"
               value={plagText}
               onChange={(e) => { setPlagText(e.target.value); setPlagError(null); }}
-              rows={10}
-              placeholder="Paste any text here — essay, article, AI output, report — to check for plagiarism signals and AI generation probability…"
-              className="w-full resize-none text-sm text-zinc-900 placeholder:text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg p-3 font-mono focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+              rows={12}
+              placeholder="Paste any text here — essay, article, AI output, or report — to check for plagiarism signals, formulaic phrasing, and originality probability…"
+              className="w-full resize-none text-xs text-[#202522] placeholder-[#8C958E] bg-[#F8F9F7] border border-[#E4E8E3] rounded-lg p-3.5 focus:outline-none focus:border-[#315B46] focus:ring-1 focus:ring-[#315B46] leading-relaxed transition-colors"
             />
             {plagError && (
-              <p className="text-xs text-red-600 font-mono bg-red-50 border border-red-200 rounded px-3 py-2">{plagError}</p>
+              <p className="text-xs text-[#A83232] bg-[#FDF2F2] border border-[#A83232]/20 rounded-lg px-3 py-2">{plagError}</p>
             )}
             <div className="flex gap-2">
               <button
@@ -224,22 +246,22 @@ export default function ToolsPage() {
                 onClick={handlePlagiarismCheck}
                 disabled={plagLoading || plagText.trim().length < 20}
                 id="plagiarism-check-btn"
-                className="flex-1 btn-primary justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 btn-primary py-2.5 justify-center disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold shadow-xs"
               >
                 {plagLoading ? (
                   <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Analysing…
+                    <span>Analyzing Signals…</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                     </svg>
-                    Check Plagiarism
+                    <span>Check Plagiarism & AI Score</span>
                   </span>
                 )}
               </button>
@@ -247,7 +269,7 @@ export default function ToolsPage() {
                 <button
                   type="button"
                   onClick={() => { setPlagText(""); setPlagResult(null); setPlagError(null); }}
-                  className="btn-secondary px-3 py-2"
+                  className="px-3.5 py-2 bg-white hover:bg-[#F8F9F7] text-[#202522] rounded-lg border border-[#E4E8E3] text-xs font-medium transition-colors"
                 >
                   Clear
                 </button>
@@ -258,71 +280,66 @@ export default function ToolsPage() {
           {/* Right: Results Panel */}
           <div className="space-y-4">
             {!plagResult && !plagLoading && (
-              <div className="surface-card p-10 flex flex-col items-center justify-center text-center border border-zinc-200 min-h-[300px] gap-3">
-                <div className="h-12 w-12 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              <div className="bg-white border border-[#E4E8E3] rounded-xl p-10 flex flex-col items-center justify-center text-center min-h-[340px] gap-3 shadow-xs">
+                <div className="h-12 w-12 rounded-full bg-[#EBF1ED] border border-[#315B46]/20 flex items-center justify-center text-[#315B46]">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
                   </svg>
                 </div>
-                <p className="text-sm font-bold text-zinc-500">Paste your text and click Analyse</p>
-                <p className="text-xs text-zinc-400 max-w-xs">Results show AI probability, originality score, perplexity, sentence burstiness, and flagged phrases.</p>
+                <p className="text-sm font-bold text-[#202522]">Paste text and run check</p>
+                <p className="text-xs text-[#69736C] max-w-xs leading-relaxed">
+                  Real-time scoring evaluates AI probabilities, linguistic perplexity, burstiness variation, and formulaic phrases.
+                </p>
               </div>
             )}
 
             {plagLoading && (
-              <div className="surface-card p-10 flex flex-col items-center justify-center gap-4 bg-black text-white border border-zinc-800 min-h-[300px]">
-                <div className="relative">
-                  <div className="h-12 w-12 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                  </span>
-                </div>
+              <div className="bg-white border border-[#E4E8E3] rounded-xl p-10 flex flex-col items-center justify-center gap-4 min-h-[340px] shadow-xs">
+                <div className="h-12 w-12 rounded-full border-2 border-[#E4E8E3] border-t-[#315B46] animate-spin" />
                 <div className="text-center">
-                  <p className="text-sm font-bold text-white">Running Signal Analysis…</p>
-                  <p className="text-xs text-zinc-400 mt-1 font-mono">Checking patterns · perplexity · burstiness</p>
+                  <p className="text-sm font-bold text-[#202522]">Running Signal Analysis…</p>
+                  <p className="text-xs text-[#69736C] mt-1 font-mono">Scanning patterns · perplexity · burstiness</p>
                 </div>
               </div>
             )}
 
             {plagResult && (
-              <div className="space-y-3 animate-fade-in">
-                {/* Verdict */}
-                <div className="surface-card p-4 bg-black text-white border border-zinc-800">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className={`text-sm font-extrabold ${verdictColor}`}>{plagResult.verdict}</p>
-                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{plagResult.detail}</p>
-                    </div>
-                  </div>
+              <div className="space-y-4 animate-fade-in">
+                {/* Verdict Card */}
+                <div className="bg-white border border-[#E4E8E3] rounded-xl p-4 shadow-xs">
+                  <p className={`text-sm font-bold ${verdictColor}`}>{plagResult.verdict}</p>
+                  <p className="text-xs text-[#69736C] mt-1 leading-relaxed">{plagResult.detail}</p>
                 </div>
 
-                {/* Score Rings */}
-                <div className="surface-card p-5 bg-zinc-950 border border-zinc-800">
+                {/* Score Rings Card */}
+                <div className="bg-white border border-[#E4E8E3] rounded-xl p-5 shadow-xs">
                   <div className="flex items-center justify-around">
-                    <ScoreRing score={Math.round(plagResult.ai_generated_probability)} label="AI Content" />
-                    <ScoreRing score={Math.round(plagResult.human_written_probability)} label="Human" />
-                    <ScoreRing score={Math.round(plagResult.originality_score)} label="Original" />
+                    <ScoreRing score={Math.round(plagResult.ai_generated_probability)} label="AI Probability" />
+                    <ScoreRing score={Math.round(plagResult.human_written_probability)} label="Human Score" />
+                    <ScoreRing score={Math.round(plagResult.originality_score)} label="Originality" />
                   </div>
                 </div>
 
-                {/* Stats Bars */}
-                <div className="surface-card p-4 bg-zinc-950 border border-zinc-800 space-y-3">
-                  <p className="text-[10px] font-mono text-zinc-400 uppercase mb-1">Linguistic Metrics</p>
-                  <StatBar label="Perplexity (Variety)" value={plagResult.perplexity_score} />
-                  <StatBar label="Burstiness (Sentence Variance)" value={plagResult.burstiness_score} />
+                {/* Metric Bars Card */}
+                <div className="bg-white border border-[#E4E8E3] rounded-xl p-4 space-y-3 shadow-xs">
+                  <p className="text-[10px] font-semibold text-[#69736C] uppercase tracking-wider mb-1">Linguistic Quality Metrics</p>
+                  <StatBar label="Perplexity (Vocabulary Diversity)" value={plagResult.perplexity_score} />
+                  <StatBar label="Burstiness (Sentence Cadence Variance)" value={plagResult.burstiness_score} />
                 </div>
 
                 {/* Flagged Phrases */}
                 {plagResult.flagged_phrases.length > 0 && (
-                  <div className="surface-card p-4 bg-zinc-950 border border-zinc-800 space-y-2">
-                    <p className="text-[10px] font-mono text-zinc-400 uppercase">Flagged Signals ({plagResult.flagged_phrases.length})</p>
+                  <div className="bg-white border border-[#E4E8E3] rounded-xl p-4 space-y-2 shadow-xs">
+                    <p className="text-[10px] font-semibold text-[#69736C] uppercase tracking-wider">
+                      Flagged Repetitive Phrases ({plagResult.flagged_phrases.length})
+                    </p>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                       {plagResult.flagged_phrases.map((f: PlagiarismMatch, i: number) => (
-                        <div key={i} className="flex items-start justify-between gap-2 bg-zinc-900 rounded px-3 py-2 border border-zinc-800">
-                          <p className="text-xs text-zinc-200 font-mono flex-1 leading-snug">"{f.phrase}"</p>
+                        <div key={i} className="flex items-start justify-between gap-2 bg-[#F8F9F7] rounded-lg p-2.5 border border-[#E4E8E3]">
+                          <p className="text-xs text-[#202522] font-mono flex-1 leading-snug">"{f.phrase}"</p>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <SignalBadge signal={f.signal} />
-                            <span className="text-[10px] font-mono text-zinc-500">{f.similarity_score}pt</span>
+                            <span className="text-[10px] font-mono text-[#8C958E]">{f.similarity_score}pt</span>
                           </div>
                         </div>
                       ))}
@@ -337,201 +354,176 @@ export default function ToolsPage() {
 
       {/* ── HUMANIZE TEXT ─────────────────────────────────────────────────── */}
       {activeTool === "humanize" && (
-        <div className="space-y-4">
-          {/* Controls Row */}
-          <div className="surface-card p-4 border border-zinc-200 flex flex-wrap items-center gap-4">
-            <div className="space-y-1">
-              <p className="text-[10px] font-mono text-zinc-500 uppercase">Writing Style</p>
-              <div className="flex gap-1.5">
-                {["casual", "natural", "professional", "academic"].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setHumanStyle(s)}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all duration-150 border ${
-                      humanStyle === s
-                        ? "bg-black text-white border-black"
-                        : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-400"
-                    }`}
-                  >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
+        <div className="space-y-5">
+          {/* Controls Bar */}
+          <div className="bg-white border border-[#E4E8E3] rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-[#69736C] uppercase tracking-wider">Writing Tone</p>
+                <div className="flex gap-1.5">
+                  {["natural", "casual", "professional", "academic"].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setHumanStyle(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+                        humanStyle === s
+                          ? "bg-[#315B46] text-white shadow-xs"
+                          : "bg-white hover:bg-[#F8F9F7] text-[#69736C] border border-[#E4E8E3]"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-[#69736C] uppercase tracking-wider">Humanize Intensity</p>
+                <div className="flex gap-1.5">
+                  {["light", "medium", "heavy"].map((lvl) => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setHumanIntensity(lvl)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+                        humanIntensity === lvl
+                          ? "bg-[#315B46] text-white shadow-xs"
+                          : "bg-white hover:bg-[#F8F9F7] text-[#69736C] border border-[#E4E8E3]"
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[10px] font-mono text-zinc-500 uppercase">Humanize Intensity</p>
-              <div className="flex gap-1.5">
-                {["light", "medium", "heavy"].map((i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setHumanIntensity(i)}
-                    className={`px-3 py-1.5 rounded text-xs font-bold transition-all duration-150 border ${
-                      humanIntensity === i
-                        ? "bg-black text-white border-black"
-                        : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-400"
-                    }`}
-                  >
-                    {i.charAt(0).toUpperCase() + i.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={handleHumanize}
+              disabled={humanLoading || humanText.trim().length < 20}
+              id="humanize-btn"
+              className="btn-primary py-2 px-5 text-xs font-semibold shadow-xs disabled:opacity-40 disabled:cursor-not-allowed self-end"
+            >
+              {humanLoading ? "Humanizing…" : "Humanize Text Now"}
+            </button>
           </div>
 
-          {/* Two-column editor */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Input */}
-            <div className="surface-card p-5 space-y-3 border border-zinc-200">
+          {/* Side by side panels */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Left: Input Textarea */}
+            <div className="bg-white border border-[#E4E8E3] rounded-xl p-5 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-mono font-bold text-zinc-400 uppercase">Original Text</p>
-                <span className="text-[10px] font-mono text-zinc-500">{humanText.split(/\s+/).filter(Boolean).length} words</span>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#69736C]">Original AI Text</p>
+                <span className="text-[11px] font-mono text-[#8C958E]">{humanText.length} chars</span>
               </div>
               <textarea
                 id="humanize-input"
                 value={humanText}
-                onChange={(e) => { setHumanText(e.target.value); setHumanError(null); setHumanResult(null); }}
-                rows={12}
-                placeholder="Paste AI-generated text here to rewrite it with a more authentic human voice and natural phrasing…"
-                className="w-full resize-none text-sm text-zinc-900 placeholder:text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg p-3 font-mono focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                onChange={(e) => { setHumanText(e.target.value); setHumanError(null); }}
+                rows={14}
+                placeholder="Paste AI-generated text here to humanize, vary sentence lengths, and introduce authentic vocabulary…"
+                className="w-full resize-none text-xs text-[#202522] placeholder-[#8C958E] bg-[#F8F9F7] border border-[#E4E8E3] rounded-lg p-3.5 focus:outline-none focus:border-[#315B46] focus:ring-1 focus:ring-[#315B46] leading-relaxed transition-colors"
               />
               {humanError && (
-                <p className="text-xs text-red-600 font-mono bg-red-50 border border-red-200 rounded px-3 py-2">{humanError}</p>
+                <p className="text-xs text-[#A83232] bg-[#FDF2F2] border border-[#A83232]/20 rounded-lg px-3 py-2">{humanError}</p>
               )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleHumanize}
-                  disabled={humanLoading || humanText.trim().length < 20}
-                  id="humanize-btn"
-                  className="flex-1 btn-primary justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {humanLoading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Humanizing…
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                      </svg>
-                      Humanize Text
-                    </span>
-                  )}
-                </button>
-                {humanText && (
-                  <button
-                    type="button"
-                    onClick={() => { setHumanText(""); setHumanResult(null); setHumanError(null); }}
-                    className="btn-secondary px-3 py-2"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
             </div>
 
-            {/* Output */}
-            <div className="surface-card p-5 space-y-3 border border-zinc-200 flex flex-col">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-mono font-bold text-zinc-400 uppercase">Humanized Output</p>
-                {humanResult && (
-                  <button
-                    type="button"
-                    onClick={handleCopyHumanized}
-                    id="copy-humanized-btn"
-                    className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-black hover:text-zinc-600 transition-colors"
-                  >
-                    {copied ? (
-                      <>
-                        <svg className="w-3.5 h-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        <span className="text-green-600">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
-                        </svg>
-                        Copy Text
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {!humanResult && !humanLoading && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center bg-zinc-50 border border-zinc-200 rounded-lg p-6 min-h-[200px] gap-3">
-                  <div className="h-10 w-10 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                    </svg>
-                  </div>
-                  <p className="text-xs text-zinc-500 font-mono">Humanized text will appear here</p>
-                </div>
-              )}
-
-              {humanLoading && (
-                <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-lg border border-zinc-800 min-h-[200px] gap-3">
-                  <div className="h-10 w-10 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                  <p className="text-xs text-zinc-400 font-mono">Rewriting for human authenticity…</p>
-                </div>
-              )}
-
-              {humanResult && (
-                <div className="flex-1 flex flex-col gap-3 animate-fade-in">
-                  {/* Score delta */}
-                  <div className="flex gap-2 font-mono text-[11px]">
-                    <div className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 border border-zinc-800">
-                      <p className="text-zinc-400 uppercase text-[9px]">AI Score Before</p>
-                      <p className="font-extrabold text-red-400">{humanResult.ai_score_before.toFixed(0)}%</p>
-                    </div>
-                    <div className="flex items-center text-zinc-400">→</div>
-                    <div className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 border border-zinc-800">
-                      <p className="text-zinc-400 uppercase text-[9px]">AI Score After</p>
-                      <p className="font-extrabold text-green-400">{humanResult.ai_score_after.toFixed(0)}%</p>
-                    </div>
-                    <div className="flex items-center text-zinc-400">·</div>
-                    <div className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 border border-zinc-800">
-                      <p className="text-zinc-400 uppercase text-[9px]">Words</p>
-                      <p className="font-extrabold text-white">{humanResult.word_count_humanized}</p>
-                    </div>
-                  </div>
-
-                  {/* Humanized text output */}
-                  <textarea
-                    ref={humanizedRef}
-                    readOnly
-                    value={humanResult.humanized_text}
-                    rows={9}
-                    className="w-full resize-none text-sm text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg p-3 font-sans focus:outline-none"
-                  />
-
-                  {/* Changes list */}
-                  {humanResult.changes_made.length > 0 && (
-                    <div className="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-1">
-                      <p className="text-[9px] font-mono text-zinc-500 uppercase mb-1">Changes Applied</p>
-                      {humanResult.changes_made.map((c, i) => (
-                        <div key={i} className="flex items-start gap-1.5 text-[11px] font-mono text-zinc-300">
-                          <span className="text-green-500 mt-0.5 shrink-0">✓</span>
-                          {c}
-                        </div>
-                      ))}
-                    </div>
+            {/* Right: Humanized Output Panel */}
+            <div className="bg-white border border-[#E4E8E3] rounded-xl p-5 space-y-3 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E4E8E3]">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#202522]">Humanized Output</p>
+                  {humanResult && (
+                    <button
+                      type="button"
+                      onClick={handleCopyHumanized}
+                      id="copy-humanized-btn"
+                      className="px-2.5 py-1 text-xs bg-white hover:bg-[#F8F9F7] text-[#202522] border border-[#E4E8E3] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-2xs"
+                    >
+                      {copied ? (
+                        <span className="text-[#2E6A4F] font-semibold">Copied!</span>
+                      ) : (
+                        <span>Copy Output</span>
+                      )}
+                    </button>
                   )}
                 </div>
-              )}
+
+                {!humanResult && !humanLoading && (
+                  <div className="py-20 flex flex-col items-center justify-center text-center gap-2">
+                    <p className="text-xs text-[#8C958E]">Humanized text will appear here</p>
+                    <p className="text-[11px] text-[#8C958E] max-w-xs leading-relaxed">
+                      Tone adjustments substitute formulaic patterns with conversational phrasing and variable cadence.
+                    </p>
+                  </div>
+                )}
+
+                {humanLoading && (
+                  <div className="py-20 flex flex-col items-center justify-center gap-3">
+                    <div className="h-8 w-8 rounded-full border-2 border-[#E4E8E3] border-t-[#315B46] animate-spin" />
+                    <p className="text-xs font-semibold text-[#202522]">Rewriting and humanizing…</p>
+                  </div>
+                )}
+
+                {humanResult && (
+                  <div className="space-y-4 pt-3">
+                    {/* Score comparison banner */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-[#F8F9F7] rounded-lg border border-[#E4E8E3]">
+                        <span className="text-[10px] uppercase font-semibold text-[#69736C]">AI Score Before</span>
+                        <p className="text-base font-bold text-[#A83232] font-mono mt-0.5">
+                          {Math.round(humanResult.ai_score_before)}%
+                        </p>
+                      </div>
+                      <div className="p-3 bg-[#EBF1ED] rounded-lg border border-[#2E6A4F]/20">
+                        <span className="text-[10px] uppercase font-semibold text-[#2E6A4F]">AI Score After</span>
+                        <p className="text-base font-bold text-[#2E6A4F] font-mono mt-0.5">
+                          {Math.round(humanResult.ai_score_after)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <textarea
+                      ref={humanizedRef}
+                      readOnly
+                      rows={10}
+                      value={humanResult.humanized_text}
+                      className="w-full resize-none text-xs text-[#202522] bg-[#F8F9F7] border border-[#E4E8E3] rounded-lg p-3.5 focus:outline-none leading-relaxed"
+                    />
+
+                    {/* Changes Made */}
+                    {humanResult.changes_made.length > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-[#E4E8E3]">
+                        <p className="text-[10px] font-semibold text-[#69736C] uppercase tracking-wider">
+                          Enhancements Applied ({humanResult.changes_made.length})
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {humanResult.changes_made.map((ch, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-[#EBF1ED] text-[#2E6A4F] border border-[#2E6A4F]/20 font-medium">
+                              {ch}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function ToolsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-[#69736C]">Loading tools…</div>}>
+      <ToolsContent />
+    </Suspense>
   );
 }

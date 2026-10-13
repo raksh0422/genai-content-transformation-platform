@@ -9,6 +9,7 @@ from app.config import Settings, get_settings
 from app.database import get_db, get_db_session
 from app.schemas.document import DocumentListResponse, DocumentMetadataResponse, DocumentUploadResponse
 from app.schemas.chunk import ChunkListResponse, ChunkResponse
+from app.services.activity_service import log_activity
 from app.services.document_service import DocumentService
 from app.services.storage_service import StorageService
 from app.utils.file_validation import read_and_validate_upload
@@ -87,6 +88,23 @@ async def upload_document(
     doc.id = doc_id
     doc.filename = storage_filename
     await db.flush()
+
+    # Record activity log
+    await log_activity(
+        db=db,
+        event_type="document_uploaded",
+        description=f"Document uploaded: '{file.filename or storage_filename}'",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        resource_type="document",
+        resource_id=str(doc.id),
+        status="success",
+        details={
+            "file_size_bytes": len(content),
+            "mime_type": mime_type,
+            "extension": extension,
+        },
+    )
 
     # Queue background processing
     background_tasks.add_task(
@@ -226,6 +244,17 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document {document_id} not found.",
         )
+
+    await log_activity(
+        db=db,
+        event_type="document_deleted",
+        description=f"Document deleted: {document_id}",
+        user_id=current_user.user_id,
+        user_email=current_user.email,
+        resource_type="document",
+        resource_id=str(document_id),
+        status="success",
+    )
 
 
 # ---------------------------------------------------------------------------

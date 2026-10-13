@@ -67,12 +67,11 @@ export function ExportToolbar({ transformation }: ExportToolbarProps) {
     md += `---\n\n${jsonToMarkdown(transformation.content, transformation.transformation_type)}\n\n`;
 
     if (transformation.source_chunks && transformation.source_chunks.length > 0) {
-      md += `## Source Citations\n\n`;
+      md += `## Source References\n\n`;
       transformation.source_chunks.forEach((chunk, i) => {
-        md += `### Citation #${i + 1} (Chunk ${chunk.chunk_index})\n`;
+        md += `### Reference #${i + 1}\n`;
         if (chunk.page_number != null) md += `- **Page:** ${chunk.page_number}\n`;
         if (chunk.slide_number != null) md += `- **Slide:** ${chunk.slide_number}\n`;
-        md += `- **Similarity Score:** ${(chunk.similarity_score * 100).toFixed(1)}%\n`;
         md += `> "${chunk.snippet}"\n\n`;
       });
     }

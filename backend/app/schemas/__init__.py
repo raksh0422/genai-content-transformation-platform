@@ -5,6 +5,16 @@ from app.schemas.document import (
     DocumentListResponse,
 )
 from app.schemas.chunk import ChunkResponse, ChunkListResponse
+from app.schemas.auth import (
+    UserRegisterRequest,
+    UserLoginRequest,
+    UserResponse,
+    AuthTokenResponse,
+    ForgotPasswordRequest,
+    UserStatusUpdateRequest,
+    ProfileUpdateRequest,
+    ChangePasswordRequest,
+)
 
 __all__ = [
     "DocumentUploadResponse",
@@ -12,4 +22,12 @@ __all__ = [
     "DocumentListResponse",
     "ChunkResponse",
     "ChunkListResponse",
+    "UserRegisterRequest",
+    "UserLoginRequest",
+    "UserResponse",
+    "AuthTokenResponse",
+    "ForgotPasswordRequest",
+    "UserStatusUpdateRequest",
+    "ProfileUpdateRequest",
+    "ChangePasswordRequest",
 ]

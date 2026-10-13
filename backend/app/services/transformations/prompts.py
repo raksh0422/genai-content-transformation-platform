@@ -130,6 +130,42 @@ PROMPTS: Dict[str, TransformationConfig] = {
         ),
         schema_class=PresentationResponse,
     ),
+    "humanize": TransformationConfig(
+        type_name="humanize",
+        display_title="Humanized Content Rewrite",
+        description="Rewrites document content into engaging, authentic, human-sounding prose with natural sentence cadence and variety.",
+        system_prompt=SYSTEM_BASE_INSTRUCTIONS + (
+            "Rewrite the provided document context to eliminate robotic, stiff, and formulaic phrasing. "
+            "Use natural vocabulary, high sentence length variation (burstiness), active voice, and authentic transitions. "
+            "Output clear, beautiful markdown with engaging headings and paragraphs."
+        ),
+        user_prompt_template=(
+            "Tone: {tone}\nLength Requirement: {length}\n\n"
+            "Retrieved Document Context:\n{context}\n\n"
+            "Task: Generate a humanized, natural rewrite of the document context above matching the requested Tone and Length."
+        ),
+        schema_class=None,
+    ),
+    "plagiarism_audit": TransformationConfig(
+        type_name="plagiarism_audit",
+        display_title="Originality & Plagiarism Audit",
+        description="A comprehensive originality and provenance audit report verifying text authenticity and source grounding.",
+        system_prompt=SYSTEM_BASE_INSTRUCTIONS + (
+            "Conduct an in-depth Originality & Plagiarism Audit of the provided document text. "
+            "Format your report in markdown with the following sections:\n"
+            "# Originality & Provenance Audit Report\n"
+            "## 1. Executive Authenticity Summary\n"
+            "## 2. Linguistic Variety & Burstiness Analysis\n"
+            "## 3. Repetition & Formulaic Phrase Assessment\n"
+            "## 4. Grounded Source Attributions\n"
+            "## 5. Editorial Recommendations for Maximum Originality"
+        ),
+        user_prompt_template=(
+            "Retrieved Document Context:\n{context}\n\n"
+            "Task: Perform an in-depth Originality & Plagiarism Audit on the document text provided above. Provide clear scoring analysis and actionable recommendations."
+        ),
+        schema_class=None,
+    ),
 }
 
 

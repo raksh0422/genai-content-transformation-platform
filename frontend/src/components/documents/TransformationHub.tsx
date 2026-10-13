@@ -13,6 +13,8 @@ import { useToast } from "@/components/ui/Toast";
 const TRANSFORMATION_TYPES = [
   { id: "executive_summary", label: "Executive Summary", desc: "Key insights and conclusions" },
   { id: "short_summary", label: "Short Summary", desc: "Concise 1-2 paragraph overview" },
+  { id: "humanize", label: "Humanized Rewrite", desc: "Natural, conversational flow" },
+  { id: "plagiarism_audit", label: "Originality & Plagiarism", desc: "Authenticity & attribution audit" },
   { id: "faq", label: "FAQ", desc: "Questions and answers" },
   { id: "quiz", label: "Quiz", desc: "Multiple choice questions" },
   { id: "email", label: "Email", desc: "Professional email draft" },
@@ -107,48 +109,71 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
     }
   };
 
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  // Cycle calm loading messages during generation
+  useEffect(() => {
+    if (!generating) {
+      setLoadingStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingStep((prev) => (prev + 1) % 4);
+    }, 2400);
+    return () => clearInterval(interval);
+  }, [generating]);
+
+  const loadingMessages = [
+    "Preparing your document…",
+    `Creating your ${transformationLabel(selectedType)}…`,
+    "Formatting document structure…",
+    "Finishing your document…",
+  ];
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <ToastContainer />
 
       {/* Left Panel: Selector + History */}
-      <div className="lg:w-64 xl:w-72 shrink-0 space-y-6">
+      <div className="lg:w-64 xl:w-72 shrink-0 space-y-5">
 
         {/* What would you like to create? */}
         <div className="surface-card p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            What would you like to create?
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-[#69736C] uppercase tracking-wider">
+              Content format
+            </p>
+            <span className="text-[11px] text-[#8C958F]">7 formats</span>
+          </div>
+
           <div className="space-y-1">
             {TRANSFORMATION_TYPES.map((type) => {
-              const isActive = !activeTf
-                ? selectedType === type.id
-                : activeTf?.transformation_type === type.id && !generating;
+              const isSelected = selectedType === type.id;
               return (
                 <button
                   key={type.id}
                   type="button"
                   id={`type-${type.id}`}
                   onClick={() => setSelectedType(type.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                    selectedType === type.id
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                    isSelected
+                      ? "bg-[#EBF1ED] text-[#315B46] border-[#C5D7CC] shadow-xs"
+                      : "text-[#202522] hover:bg-[#F3F6F4] border-transparent"
                   }`}
                 >
-                  <p className={`text-sm font-medium ${selectedType === type.id ? "text-blue-700" : "text-gray-900"}`}>
+                  <p className={`text-sm font-medium ${isSelected ? "text-[#315B46]" : "text-[#202522]"}`}>
                     {type.label}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{type.desc}</p>
+                  <p className="text-xs text-[#69736C] mt-0.5">{type.desc}</p>
                 </button>
               );
             })}
           </div>
 
           {/* Tone & Length */}
-          <div className="pt-2 border-t border-gray-100 space-y-3">
+          <div className="pt-3 border-t border-[#E4E8E3] space-y-3">
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] font-semibold text-[#69736C] uppercase tracking-wider block mb-1.5">
                 Tone
               </label>
               <div className="grid grid-cols-2 gap-1">
@@ -160,8 +185,8 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                     onClick={() => setSelectedTone(tone)}
                     className={`py-1.5 px-2 rounded-lg text-xs font-medium capitalize transition-colors ${
                       selectedTone === tone
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        ? "bg-[#202522] text-white"
+                        : "bg-[#F8F9F7] text-[#69736C] hover:bg-[#EBF1ED] hover:text-[#202522] border border-[#E4E8E3]"
                     }`}
                   >
                     {tone}
@@ -169,9 +194,10 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                 ))}
               </div>
             </div>
+
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
+                <label className="text-[11px] font-semibold text-[#69736C] uppercase tracking-wider block">
                   Target Length
                 </label>
               </div>
@@ -197,8 +223,8 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                     }}
                     className={`py-1.5 px-1 rounded-lg text-xs font-medium transition-colors text-center ${
                       (isCustomLength && item.id === "custom") || (!isCustomLength && selectedLength === item.id)
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        ? "bg-[#202522] text-white"
+                        : "bg-[#F8F9F7] text-[#69736C] hover:bg-[#EBF1ED] hover:text-[#202522] border border-[#E4E8E3]"
                     }`}
                   >
                     <div>{item.label}</div>
@@ -223,7 +249,7 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                       className="input-field text-xs py-1 px-2.5 w-24"
                       placeholder="100"
                     />
-                    <span className="text-xs text-gray-500 font-medium">target lines (10-300)</span>
+                    <span className="text-xs text-[#69736C]">target lines (10-300)</span>
                   </div>
                   <div className="flex items-center gap-1">
                     {[20, 50, 100, 150, 200, 300].map((preset) => (
@@ -234,23 +260,19 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                           setCustomLines(preset);
                           setSelectedLength(`${preset} lines`);
                         }}
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
                           customLines === preset
-                            ? "bg-black border-black text-white"
-                            : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-100"
+                            ? "bg-[#202522] border-[#202522] text-white"
+                            : "bg-white border-[#E4E8E3] text-[#69736C] hover:bg-[#F8F9F7]"
                         }`}
                       >
                         {preset}L
                       </button>
                     ))}
                   </div>
-                  <p className="text-[11px] text-gray-400">
-                    Will generate a comprehensive multi-section report spanning approx {customLines} lines.
-                  </p>
                 </div>
               )}
             </div>
-
           </div>
 
           <button
@@ -258,49 +280,52 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
             id="generate-btn"
             onClick={() => handleGenerate(false)}
             disabled={generating}
-            className="w-full btn-primary justify-center"
+            className="w-full btn-primary justify-center mt-2"
           >
             {generating ? (
               <span className="flex items-center gap-2">
-                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
-                Generating…
+                Creating content…
               </span>
-            ) : "Generate"}
+            ) : "Generate content"}
           </button>
         </div>
 
-        {/* History */}
+        {/* Previously Created */}
         {transformations.length > 0 && (
           <div className="surface-card p-4 space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Previously Created
+            <p className="text-[11px] font-semibold text-[#69736C] uppercase tracking-wider">
+              Saved outputs
             </p>
-            <div className="space-y-0.5">
-              {transformations.map((tf) => (
-                <button
-                  key={tf.id}
-                  type="button"
-                  id={`history-${tf.id}`}
-                  onClick={() => setActiveTf(tf)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                    activeTf?.id === tf.id
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900 capitalize">
-                      {transformationLabel(tf.transformation_type)}
-                    </p>
-                    <p className="text-xs text-gray-400 shrink-0 ml-2">
-                      {formatRelativeDate(tf.created_at)}
-                    </p>
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-1">
+              {transformations.map((tf) => {
+                const isActive = activeTf?.id === tf.id;
+                return (
+                  <button
+                    key={tf.id}
+                    type="button"
+                    id={`history-${tf.id}`}
+                    onClick={() => setActiveTf(tf)}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors border ${
+                      isActive
+                        ? "bg-[#EBF1ED] text-[#315B46] border-[#C5D7CC] font-medium"
+                        : "text-[#202522] hover:bg-[#F8F9F7] border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium truncate capitalize">
+                        {transformationLabel(tf.transformation_type)}
+                      </p>
+                      <p className="text-[11px] text-[#69736C] shrink-0 ml-2">
+                        {formatRelativeDate(tf.created_at)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -309,57 +334,61 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0">
         {generating ? (
-          <div className="surface-card p-10 flex flex-col items-center justify-center min-h-[380px] gap-6 animate-fade-in bg-black text-white bg-dot-pattern-dark border border-zinc-800">
+          <div className="surface-card p-12 flex flex-col items-center justify-center min-h-[420px] gap-5 text-center">
+            {/* Elegant restrained spinner */}
             <div className="relative flex items-center justify-center">
-              <div className="h-14 w-14 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-              <span className="absolute h-3 w-3 rounded-full bg-white animate-ping" />
+              <div className="h-12 w-12 rounded-full border-2 border-[#E4E8E3] border-t-[#315B46] animate-spin" />
+              <div className="absolute h-2 w-2 rounded-full bg-[#315B46]" />
             </div>
 
-            <div className="text-center space-y-2 max-w-sm">
-              <span className="px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-                Grounded RAG Pipeline
-              </span>
-              <p className="text-base font-extrabold text-white tracking-tight">
-                Transforming content into {transformationLabel(selectedType)}…
+            <div className="space-y-1.5 max-w-sm">
+              <p className="text-base font-semibold text-[#202522] tracking-tight">
+                {loadingMessages[loadingStep]}
               </p>
-              <p className="text-xs text-zinc-400 font-mono">
-                Extracting semantic chunks · Applying tone: <span className="text-white font-bold">{selectedTone}</span> · Target: <span className="text-white font-bold">{selectedLength}</span>
+              <p className="text-xs text-[#69736C]">
+                Transforming into {transformationLabel(selectedType).toLowerCase()} with {selectedTone} tone.
               </p>
             </div>
 
-            {/* High-tech progress indicators */}
-            <div className="w-full max-w-xs space-y-2 font-mono text-[11px]">
-              <div className="flex items-center gap-2 text-zinc-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                <span>1. Querying FAISS Vector Database</span>
-              </div>
-              <div className="flex items-center gap-2 text-zinc-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                <span>2. Executing Strict Grounding Prompts</span>
-              </div>
-              <div className="flex items-center gap-2 text-zinc-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                <span>3. Running Fact Verification Audit</span>
-              </div>
+            <div className="w-full max-w-xs bg-[#F8F9F7] border border-[#E4E8E3] rounded-full p-1 flex items-center gap-1.5 justify-center">
+              {[0, 1, 2, 3].map((step) => (
+                <span
+                  key={step}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    step === loadingStep
+                      ? "w-8 bg-[#315B46]"
+                      : "w-2 bg-[#D1D8D3]"
+                  }`}
+                />
+              ))}
             </div>
           </div>
         ) : error ? (
-          <div className="surface-card p-6 text-center space-y-3 border-red-100">
-            <p className="text-sm font-semibold text-red-600">Generation failed</p>
-            <p className="text-xs text-gray-500">{error}</p>
-            <button type="button" onClick={() => setError(null)} className="btn-secondary text-sm">
+          <div className="surface-card p-8 text-center space-y-3 border-[#F0D5D5] bg-[#FDF8F8]">
+            <div className="w-10 h-10 rounded-full bg-[#FCEBEB] text-[#A83232] mx-auto flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-[#A83232]">We couldn't generate this content</p>
+            <p className="text-xs text-[#69736C] max-w-md mx-auto">{error}</p>
+            <button
+              type="button"
+              onClick={() => handleGenerate(false)}
+              className="btn-secondary text-xs"
+            >
               Try again
             </button>
           </div>
         ) : activeTf ? (
           <div className="space-y-0">
             {/* Output Header */}
-            <div className="surface-card p-5 rounded-b-none border-b-0">
+            <div className="surface-card p-5 rounded-b-none border-b border-[#E4E8E3]">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900">{activeTf.title}</h2>
-                  <p className="text-xs text-gray-400 mt-0.5 capitalize">
-                    {transformationLabel(activeTf.transformation_type)} · {activeTf.tone} · {activeTf.length}
+                  <h2 className="text-base font-bold text-[#202522]">{activeTf.title}</h2>
+                  <p className="text-xs text-[#69736C] mt-0.5 capitalize">
+                    {transformationLabel(activeTf.transformation_type)} · {activeTf.tone} tone · {activeTf.length}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -371,7 +400,7 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
                     className="btn-ghost text-sm"
                   >
                     {copied ? (
-                      <span className="flex items-center gap-1.5 text-green-600">
+                      <span className="flex items-center gap-1.5 text-[#2E6A4F] font-medium">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
@@ -420,16 +449,16 @@ export function TransformationHub({ documentId }: TransformationHubProps) {
             </div>
           </div>
         ) : (
-          <div className="surface-card p-12 flex flex-col items-center justify-center min-h-64 text-center gap-3">
-            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+          <div className="surface-card p-12 flex flex-col items-center justify-center min-h-[320px] text-center gap-3">
+            <div className="w-12 h-12 bg-[#EBF1ED] text-[#315B46] rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">Choose a format and generate</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Select what you'd like to create from the left panel.
+              <p className="text-sm font-semibold text-[#202522]">Choose a format and generate</p>
+              <p className="text-xs text-[#69736C] mt-1 max-w-sm">
+                Select a content format from the left panel and click &ldquo;Generate content&rdquo; to create your first transformation.
               </p>
             </div>
           </div>

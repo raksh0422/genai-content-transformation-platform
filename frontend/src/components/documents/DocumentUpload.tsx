@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { api, type DocumentUploadResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".pptx", ".txt"];
+const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
 
 interface DocumentUploadProps {
   onUploadSuccess?: (doc: DocumentUploadResponse) => void;
@@ -22,7 +22,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
     async (file: File) => {
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
       if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-        setErrorMsg(`Unsupported format. Please upload a ${ACCEPTED_EXTENSIONS.join(", ")} file.`);
+        setErrorMsg(`Unsupported format. Please upload a PDF, Word (.docx), or Text (.txt) file.`);
         setState("error");
         return;
       }
@@ -37,8 +37,8 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
       setProgress(0);
 
       const timer = setInterval(() => {
-        setProgress((p) => Math.min(p + 8, 88));
-      }, 120);
+        setProgress((p) => Math.min(p + 10, 90));
+      }, 100);
 
       try {
         const result = await api.uploadDocument(file);
@@ -48,11 +48,11 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         setTimeout(() => {
           setState("idle");
           setProgress(0);
-        }, 1800);
+        }, 1200);
         onUploadSuccess?.(result);
       } catch (err) {
         clearInterval(timer);
-        setErrorMsg(err instanceof Error ? err.message : "Upload failed.");
+        setErrorMsg(err instanceof Error ? err.message : "Upload failed. Please try again.");
         setState("error");
       }
     },
@@ -103,11 +103,11 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
       }}
       className={cn(
         "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8",
-        "min-h-[220px] cursor-pointer transition-all select-none bg-slate-50",
-        isActive && "border-indigo-500 bg-indigo-50/50",
-        !isActive && !isError && "border-slate-300 hover:border-slate-400 hover:bg-slate-100/50",
-        isError && "border-red-300 bg-red-50/50",
-        isSuccess && "border-emerald-300 bg-emerald-50/50",
+        "min-h-[220px] cursor-pointer transition-all select-none bg-[#FAFAF9]",
+        isActive && "border-[#315B46] bg-[#EBF1ED]",
+        !isActive && !isError && "border-[#D5DAD3] hover:border-[#315B46] hover:bg-[#F4F6F3]",
+        isError && "border-[#A83232] bg-[#FBEBEB]",
+        isSuccess && "border-[#2E6A4F] bg-[#E8F3ED]",
         isUploading && "cursor-wait pointer-events-none"
       )}
     >
@@ -121,53 +121,62 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         aria-hidden="true"
       />
 
-      <div className="text-center space-y-1 z-10">
+      {/* Center Icon */}
+      <div className="h-12 w-12 rounded-xl bg-white border border-[#E4E8E3] shadow-sm flex items-center justify-center text-[#315B46] transition-transform group-hover:scale-105">
+        {isUploading ? (
+          <svg className="w-5 h-5 animate-spin text-[#315B46]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        ) : isSuccess ? (
+          <svg className="w-6 h-6 text-[#2E6A4F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+        ) : isError ? (
+          <svg className="w-6 h-6 text-[#A83232]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6 text-[#315B46]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+          </svg>
+        )}
+      </div>
+
+      <div className="text-center space-y-1 z-10 max-w-sm">
         {isUploading ? (
           <>
-            <p className="text-sm font-semibold text-gray-900">Uploading document…</p>
-            <p className="text-xs text-gray-500">Just a moment</p>
+            <p className="text-sm font-semibold text-[#202522]">Uploading document…</p>
+            <p className="text-xs text-[#69736C]">Preparing document for transformation</p>
           </>
         ) : isSuccess ? (
           <>
-            <p className="text-sm font-semibold text-green-700">Upload successful</p>
-            <p className="text-xs text-gray-500">Your document is being prepared</p>
+            <p className="text-sm font-semibold text-[#2E6A4F]">Upload successful</p>
+            <p className="text-xs text-[#69736C]">Opening document workspace…</p>
           </>
         ) : isError ? (
           <>
-            <p className="text-sm font-semibold text-red-600">Upload failed</p>
-            <p className="text-xs text-red-600">{errorMsg}</p>
+            <p className="text-sm font-semibold text-[#A83232]">Upload could not be completed</p>
+            <p className="text-xs text-[#A83232]">{errorMsg}</p>
           </>
         ) : (
           <>
-            <p className="text-sm font-semibold text-slate-900">
-              {isActive ? "Drop your file to upload" : "Drag and drop your file here, or click to browse"}
+            <p className="text-sm font-semibold text-[#202522]">
+              {isActive ? "Drop your file to upload" : "Drag & drop your file here, or browse"}
             </p>
-            <p className="text-xs text-slate-500">
-              Supports PDF, DOCX, PPTX, and TXT files up to 50 MB
+            <p className="text-xs text-[#69736C]">
+              Supports PDF, DOCX, and TXT files up to 50 MB
             </p>
           </>
         )}
       </div>
 
       {isUploading && (
-        <div className="w-full max-w-xs rounded-full bg-slate-200 h-1.5 overflow-hidden">
+        <div className="w-full max-w-xs rounded-full bg-[#E4E8E3] h-1.5 overflow-hidden mt-1">
           <div
-            className="h-full bg-indigo-600 rounded-full transition-all duration-200"
+            className="h-full bg-[#315B46] rounded-full transition-all duration-200"
             style={{ width: `${progress}%` }}
           />
-        </div>
-      )}
-
-      {!isUploading && !isSuccess && (
-        <div className="flex gap-1.5 flex-wrap justify-center z-10 pt-1">
-          {ACCEPTED_EXTENSIONS.map((ext) => (
-            <span
-              key={ext}
-              className="saas-badge px-2 py-0.5 text-[10px] font-semibold text-slate-600 uppercase bg-slate-200/60 border border-slate-300"
-            >
-              {ext.replace(".", "")}
-            </span>
-          ))}
         </div>
       )}
     </div>

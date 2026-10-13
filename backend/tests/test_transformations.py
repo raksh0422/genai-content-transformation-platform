@@ -10,7 +10,7 @@ from app.services.transformations.schemas import FAQResponse, QuizResponse, Emai
 
 
 class TestTransformationConfigs:
-    def test_all_7_transformation_types_registered(self):
+    def test_all_transformation_types_registered(self):
         expected = {
             "short_summary",
             "executive_summary",
@@ -19,6 +19,8 @@ class TestTransformationConfigs:
             "email",
             "social_post",
             "presentation_outline",
+            "humanize",
+            "plagiarism_audit",
         }
         assert set(PROMPTS.keys()) == expected
 

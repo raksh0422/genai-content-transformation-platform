@@ -94,6 +94,8 @@ def create_app() -> FastAPI:
     from app.api.v1.endpoints.transformations import router as transformations_router
     from app.api.v1.endpoints.verification import router as verification_router
     from app.api.v1.endpoints.tools import router as tools_router
+    from app.api.v1.endpoints.auth import router as auth_router
+    from app.api.v1.endpoints.admin import router as admin_router
 
     app.include_router(health_router)
     app.include_router(documents_router)
@@ -101,6 +103,8 @@ def create_app() -> FastAPI:
     app.include_router(transformations_router)
     app.include_router(verification_router)
     app.include_router(tools_router)
+    app.include_router(auth_router)
+    app.include_router(admin_router)
 
     return app
 

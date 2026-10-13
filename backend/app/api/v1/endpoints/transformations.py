@@ -7,13 +7,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
+from app.core.auth import User, get_current_user
 from app.database import get_db
+from app.models.document import Document
 from app.schemas.transformation import (
     TransformationCreateRequest,
     TransformationListResponse,
     TransformationResponse,
 )
 from app.services.transformations.generator import get_transformation_service
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +34,18 @@ async def generate_transformation(
     body: TransformationCreateRequest,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    current_user: User = Depends(get_current_user),
 ) -> TransformationResponse:
     """Generate and persist a content transformation for an uploaded document."""
+    # Check document ownership
+    res = await db.execute(select(Document).where(Document.id == body.document_id))
+    doc = res.scalar_one_or_none()
+    if doc is None or (current_user.role != "admin" and doc.user_id != current_user.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document '{body.document_id}' not found.",
+        )
+
     tf_svc = get_transformation_service(settings)
     try:
         tf = await tf_svc.generate_transformation(
@@ -42,6 +55,7 @@ async def generate_transformation(
             tone=body.tone,
             length=body.length,
             query_hint=body.query_hint,
+            user_id=current_user.user_id,
         )
         return TransformationResponse.model_validate(tf)
     except ValueError as val_err:
@@ -68,11 +82,17 @@ async def get_transformation(
     transformation_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    current_user: User = Depends(get_current_user),
 ) -> TransformationResponse:
     """Fetch a generated transformation by ID."""
     tf_svc = get_transformation_service(settings)
     tf = await tf_svc.get_transformation(db, transformation_id)
     if tf is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transformation '{transformation_id}' not found.",
+        )
+    if current_user.role != "admin" and tf.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Transformation '{transformation_id}' not found.",
@@ -91,8 +111,18 @@ async def list_document_transformations(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    current_user: User = Depends(get_current_user),
 ) -> TransformationListResponse:
     """List all transformations associated with a document."""
+    # Check document ownership
+    res = await db.execute(select(Document).where(Document.id == document_id))
+    doc = res.scalar_one_or_none()
+    if doc is None or (current_user.role != "admin" and doc.user_id != current_user.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document '{document_id}' not found.",
+        )
+
     tf_svc = get_transformation_service(settings)
     transformations = await tf_svc.list_document_transformations(db, document_id)
     items = [TransformationResponse.model_validate(t) for t in transformations]

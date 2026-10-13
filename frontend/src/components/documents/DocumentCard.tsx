@@ -112,12 +112,6 @@ export function DocumentCard({ document: doc }: DocumentCardProps) {
                 <span>{doc.word_count.toLocaleString()} words</span>
               </>
             )}
-            {doc.chunk_count != null && (
-              <>
-                <span className="text-white/20">•</span>
-                <span className="text-[#D4AF37] font-semibold">{doc.chunk_count} chunks</span>
-              </>
-            )}
           </div>
 
           <p className="text-[11px] text-[#94A89C]/70">

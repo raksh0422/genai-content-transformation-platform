@@ -14,7 +14,8 @@ class TransformationCreateRequest(BaseModel):
     transformation_type: str = Field(
         description=(
             "Transformation type: 'short_summary', 'executive_summary', "
-            "'faq', 'quiz', 'email', 'social_post', or 'presentation_outline'"
+            "'faq', 'quiz', 'email', 'social_post', 'presentation_outline', "
+            "'humanize', or 'plagiarism_audit'"
         )
     )
     tone: str = Field(default="professional", description="Tone e.g. 'professional', 'executive', 'casual', 'academic'")
@@ -47,6 +48,11 @@ class TransformationResponse(BaseModel):
     content: str
     structured_output: Optional[Dict[str, Any]] = None
     source_chunks: Optional[List[SourceChunkCitation]] = None
+    status: Optional[str] = "completed"
+    duration_seconds: Optional[float] = None
+    error_category: Optional[str] = None
+    error_message: Optional[str] = None
+    user_id: Optional[str] = None
     created_at: datetime
 
 

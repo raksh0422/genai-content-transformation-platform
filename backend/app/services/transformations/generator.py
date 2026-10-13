@@ -6,6 +6,7 @@ validates structured JSON outputs, and persists transformation records in Postgr
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings, get_settings
 from app.models.document import Document
 from app.models.transformation import Transformation
+from app.services.activity_service import log_activity
 from app.services.llm_service import BaseLLMProvider, get_llm_provider
 from app.services.retrieval_service import RetrievalService, get_retrieval_service
 from app.services.transformations.prompts import get_transformation_config
@@ -43,6 +45,7 @@ class TransformationService:
         tone: str = "professional",
         length: str = "medium",
         query_hint: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> Transformation:
         """
         Generate a source-grounded transformation for a document.
@@ -54,15 +57,20 @@ class TransformationService:
             tone: e.g. 'professional', 'executive', 'casual', 'academic'.
             length: e.g. 'short', 'medium', 'detailed'.
             query_hint: Optional targeted query for retrieval filtering.
+            user_id: Requesting user identifier.
 
         Returns:
             Persisted Transformation ORM instance.
         """
+        start_time = time.time()
+
         # Load document
         res = await db.execute(select(Document).where(Document.id == document_id))
         doc = res.scalar_one_or_none()
         if doc is None:
             raise ValueError(f"Document {document_id} not found.")
+
+        effective_user_id = user_id or doc.user_id
 
         if doc.status != "completed":
             raise ValueError(f"Document status is '{doc.status}'. Generation requires 'completed' status.")
@@ -137,32 +145,89 @@ class TransformationService:
             len(retrieved_chunks),
         )
 
-        # Execute LLM completion
-        llm_res = await self._llm_provider.generate(
-            prompt=prompt,
-            system_prompt=config.system_prompt,
-            response_schema=config.schema_class,
-        )
+        try:
+            # Execute LLM completion
+            llm_res = await self._llm_provider.generate(
+                prompt=prompt,
+                system_prompt=config.system_prompt,
+                response_schema=config.schema_class,
+            )
 
-        title = f"{config.display_title} — {doc.original_filename}"
+            title = f"{config.display_title} — {doc.original_filename}"
+            duration = round(time.time() - start_time, 2)
 
-        # Persist Transformation in database
-        tf = Transformation(
-            id=uuid.uuid4(),
-            document_id=document_id,
-            transformation_type=transformation_type,
-            tone=tone,
-            length=length,
-            title=title,
-            content=llm_res.content,
-            structured_output=llm_res.structured_data,
-            source_chunks=source_citations,
-        )
-        db.add(tf)
-        await db.flush()
+            # Persist Transformation in database
+            tf = Transformation(
+                id=uuid.uuid4(),
+                user_id=effective_user_id,
+                document_id=document_id,
+                transformation_type=transformation_type,
+                tone=tone,
+                length=length,
+                title=title,
+                content=llm_res.content,
+                structured_output=llm_res.structured_data,
+                source_chunks=source_citations,
+                status="completed",
+                duration_seconds=duration,
+            )
+            db.add(tf)
+            await db.flush()
 
-        logger.info("Transformation %s persisted for doc %s", tf.id, document_id)
-        return tf
+            # Record activity log
+            await log_activity(
+                db=db,
+                event_type="transformation_completed",
+                description=f"Generated {transformation_type} for '{doc.original_filename}'",
+                user_id=effective_user_id,
+                resource_type="transformation",
+                resource_id=str(tf.id),
+                status="success",
+                details={
+                    "transformation_type": transformation_type,
+                    "duration_seconds": duration,
+                    "document_id": str(document_id),
+                },
+            )
+
+            logger.info("Transformation %s persisted for doc %s (duration=%.2fs)", tf.id, document_id, duration)
+            return tf
+
+        except Exception as gen_exc:
+            duration = round(time.time() - start_time, 2)
+            # Record failed transformation in database
+            failed_tf = Transformation(
+                id=uuid.uuid4(),
+                user_id=effective_user_id,
+                document_id=document_id,
+                transformation_type=transformation_type,
+                tone=tone,
+                length=length,
+                title=f"{config.display_title} (Failed) — {doc.original_filename}",
+                content="",
+                status="failed",
+                duration_seconds=duration,
+                error_category="generation_failure",
+                error_message=str(gen_exc),
+            )
+            db.add(failed_tf)
+            await db.flush()
+
+            await log_activity(
+                db=db,
+                event_type="transformation_failed",
+                description=f"Generation failed for {transformation_type} on '{doc.original_filename}': {gen_exc}",
+                user_id=effective_user_id,
+                resource_type="transformation",
+                resource_id=str(failed_tf.id),
+                status="failed",
+                details={
+                    "transformation_type": transformation_type,
+                    "error": str(gen_exc),
+                    "document_id": str(document_id),
+                },
+            )
+            raise gen_exc
 
     async def get_transformation(
         self,

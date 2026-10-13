@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { TransformationResponse } from "@/lib/api";
 
 // ─── JSON schema type renderers ───────────────────────────────────────────────
@@ -27,12 +28,12 @@ function renderFAQ(data: FAQResponse) {
   return (
     <div className="space-y-5">
       {data.items.map((item, i) => (
-        <div key={i} className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1.5 flex items-start gap-2">
-            <span className="text-blue-600 font-bold shrink-0">Q{i + 1}.</span>
+        <div key={i} className="border-b border-[#E4E8E3] pb-5 last:border-0 last:pb-0">
+          <h3 className="text-sm font-semibold text-[#202522] mb-1.5 flex items-start gap-2">
+            <span className="text-[#315B46] font-bold shrink-0">Q{i + 1}.</span>
             {item.question}
           </h3>
-          <p className="text-sm text-gray-700 leading-relaxed pl-7">{item.answer}</p>
+          <p className="text-sm text-[#202522] leading-relaxed pl-7">{item.answer}</p>
         </div>
       ))}
     </div>
@@ -54,29 +55,31 @@ function renderQuiz(data: QuizResponse) {
   return (
     <div className="space-y-6">
       {data.questions.map((q) => (
-        <div key={q.question_number} className="border border-gray-100 rounded-xl p-5 space-y-3 bg-gray-50">
-          <p className="text-sm font-semibold text-gray-900">
-            <span className="text-blue-600 mr-1.5">{q.question_number}.</span>
+        <div key={q.question_number} className="border border-[#E4E8E3] rounded-xl p-5 space-y-3 bg-[#F8F9F7]">
+          <p className="text-sm font-semibold text-[#202522]">
+            <span className="text-[#315B46] mr-1.5 font-bold">{q.question_number}.</span>
             {q.question}
           </p>
-          <ul className="space-y-1.5 pl-5">
+          <ul className="space-y-1.5 pl-4">
             {q.options.map((opt, i) => {
               const letter = String.fromCharCode(65 + i);
               const isCorrect = q.correct_answer === letter;
               return (
                 <li
                   key={i}
-                  className={`text-sm flex items-start gap-2 py-1.5 px-3 rounded-lg ${
-                    isCorrect ? "bg-green-50 text-green-800 font-medium" : "text-gray-700"
+                  className={`text-sm flex items-start gap-2 py-1.5 px-3 rounded-lg border transition-colors ${
+                    isCorrect
+                      ? "bg-[#EBF1ED] text-[#2E6A4F] border-[#C5D7CC] font-medium"
+                      : "bg-white text-[#202522] border-[#E4E8E3]"
                   }`}
                 >
-                  <span className={`shrink-0 font-semibold ${isCorrect ? "text-green-600" : "text-gray-400"}`}>
+                  <span className={`shrink-0 font-semibold ${isCorrect ? "text-[#2E6A4F]" : "text-[#69736C]"}`}>
                     {letter}
                   </span>
                   {/* Strip "A) " / "B) " prefix if backend included it */}
-                  {opt.replace(/^[A-D]\)\s*/i, "")}
+                  <span>{opt.replace(/^[A-D]\)\s*/i, "")}</span>
                   {isCorrect && (
-                    <svg className="w-4 h-4 text-green-500 ml-auto shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-4 h-4 text-[#2E6A4F] ml-auto shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                   )}
@@ -85,8 +88,8 @@ function renderQuiz(data: QuizResponse) {
             })}
           </ul>
           {q.explanation && cleanExplanation(q.explanation) && (
-            <div className="text-xs text-gray-500 bg-white border border-gray-100 rounded-lg px-3 py-2 leading-relaxed">
-              <span className="font-semibold text-gray-600">Explanation: </span>{cleanExplanation(q.explanation)}
+            <div className="text-xs text-[#69736C] bg-white border border-[#E4E8E3] rounded-lg px-3.5 py-2.5 leading-relaxed">
+              <span className="font-semibold text-[#202522]">Explanation: </span>{cleanExplanation(q.explanation)}
             </div>
           )}
         </div>
@@ -99,18 +102,18 @@ function renderPresentation(data: PresentationResponse) {
   return (
     <div className="space-y-4">
       {data.slides.map((slide) => (
-        <div key={slide.slide_number} className="border border-zinc-200 rounded-xl overflow-hidden surface-card">
-          <div className="bg-zinc-900 text-white border-b border-zinc-800 px-4 py-3 flex items-center gap-3">
-            <span className="h-7 w-7 rounded-lg bg-white text-black flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
+        <div key={slide.slide_number} className="border border-[#E4E8E3] rounded-xl overflow-hidden bg-white shadow-xs">
+          <div className="bg-[#202522] text-white px-4 py-3 flex items-center gap-3">
+            <span className="h-6 w-6 rounded-md bg-[#315B46] text-white flex items-center justify-center text-xs font-bold shrink-0">
               {slide.slide_number}
             </span>
-            <p className="text-sm font-bold text-white">{slide.title}</p>
+            <p className="text-sm font-semibold text-white">{slide.title}</p>
           </div>
-          <ul className="px-5 py-3.5 space-y-2">
+          <ul className="px-5 py-4 space-y-2">
             {slide.bullet_points.map((pt, i) => (
-              <li key={i} className="text-sm text-zinc-700 flex items-start gap-2.5">
-                <span className="mt-2 h-1.5 w-1.5 bg-black rounded-full shrink-0" />
-                {pt}
+              <li key={i} className="text-sm text-[#202522] flex items-start gap-2.5">
+                <span className="mt-2 h-1.5 w-1.5 bg-[#315B46] rounded-full shrink-0" />
+                <span>{pt}</span>
               </li>
             ))}
           </ul>
@@ -215,59 +218,76 @@ export function jsonToMarkdown(rawContent: string, transformationType: string = 
   }
 }
 
-function renderEmail(data: EmailResponse) {
+function EmailCard({ data }: { data: EmailResponse }) {
+  const [copiedEmail, setCopiedEmail] = useState(false);
   const emailDraftText = `Subject: ${data.subject}\n\n${data.salutation}\n\n${data.body}\n\nAction Items:\n${(data.action_items || []).map((a) => `• ${a}`).join("\n")}\n\n${data.signoff}`;
 
   const copyEmailDraft = async () => {
     try {
       await navigator.clipboard.writeText(emailDraftText);
-      alert("Email draft copied to clipboard! You can paste it directly into your email client.");
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2000);
     } catch {
-      alert("Failed to copy email draft");
+      /* ignore */
     }
   };
 
   return (
-    <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white surface-card">
-      <div className="bg-zinc-900 text-white border-b border-zinc-800 px-5 py-3.5 flex items-center justify-between">
+    <div className="border border-[#E4E8E3] rounded-xl overflow-hidden bg-white shadow-xs">
+      <div className="bg-[#F8F9F7] border-b border-[#E4E8E3] px-5 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white text-black uppercase tracking-wider">Mail Draft</span>
-          <span className="text-sm font-bold text-white truncate">Subject: {data.subject}</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#EBF1ED] text-[#315B46] uppercase tracking-wider">Email Draft</span>
+          <span className="text-sm font-semibold text-[#202522] truncate">Subject: {data.subject}</span>
         </div>
         <button
           type="button"
           onClick={copyEmailDraft}
-          className="btn-secondary text-xs py-1 px-3 flex items-center gap-1.5 shrink-0 bg-white hover:bg-zinc-200 border-white text-black font-bold"
+          className="btn-secondary text-xs py-1 px-3 flex items-center gap-1.5 shrink-0"
         >
-          <svg className="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-          </svg>
-          Copy Ready-to-Send Mail Draft
+          {copiedEmail ? (
+            <span className="text-[#2E6A4F] font-semibold flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              Copied!
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[#202522]">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+              </svg>
+              Copy draft
+            </span>
+          )}
         </button>
       </div>
 
-      <div className="p-6 space-y-4 text-sm text-zinc-800 leading-relaxed font-sans">
-        <p className="font-bold text-black">{data.salutation}</p>
-        <p className="whitespace-pre-line text-zinc-700">{data.body}</p>
+      <div className="p-6 space-y-4 text-sm text-[#202522] leading-relaxed">
+        <p className="font-semibold text-[#202522]">{data.salutation}</p>
+        <p className="whitespace-pre-line text-[#202522]">{data.body}</p>
         {data.action_items?.length > 0 && (
-          <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 space-y-2">
-            <p className="text-xs font-mono font-bold text-black uppercase tracking-wider">Action Items & Next Steps</p>
+          <div className="bg-[#F8F9F7] border border-[#E4E8E3] rounded-lg p-4 space-y-2">
+            <p className="text-[11px] font-semibold text-[#69736C] uppercase tracking-wider">Action Items</p>
             <ul className="space-y-1.5">
               {data.action_items.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-zinc-900 font-medium">
-                  <span className="text-black font-bold mt-0.5">•</span>
-                  {item}
+                <li key={i} className="flex items-start gap-2 text-sm text-[#202522]">
+                  <span className="text-[#315B46] font-bold mt-0.5">•</span>
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
-        <div className="pt-2 text-zinc-600 whitespace-pre-line font-medium">
+        <div className="pt-2 text-[#69736C] whitespace-pre-line font-medium">
           {data.signoff}
         </div>
       </div>
     </div>
   );
+}
+
+function renderEmail(data: EmailResponse) {
+  return <EmailCard data={data} />;
 }
 
 function renderExecutiveSummary(data: ExecutiveSummaryResponse) {
@@ -520,16 +540,16 @@ function EditorView({ content, transformationType = "", onSave, onCancel }: Edit
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <span className="text-xs font-semibold text-[#315B46] uppercase tracking-wider flex items-center gap-1.5">
+          <svg className="w-4 h-4 text-[#315B46]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
           </svg>
-          Document Word Editor
+          Document Editor
         </span>
-        <span className="text-xs text-gray-400">Edit text, headings, and formatting directly</span>
+        <span className="text-xs text-[#69736C]">Make edits directly to your generated document</span>
       </div>
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden tiptap-editor shadow-sm bg-white">
+      <div className="border border-[#E4E8E3] rounded-xl overflow-hidden tiptap-editor shadow-xs bg-white">
         <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-100 bg-gray-50">
           {formatBtn("B", "Bold", () => editor?.chain().focus().toggleBold().run(), () => !!editor?.isActive("bold"))}
           {formatBtn("I", "Italic", () => editor?.chain().focus().toggleItalic().run(), () => !!editor?.isActive("italic"))}
@@ -583,6 +603,7 @@ function toClipboardText(content: string, type: string): string {
 }
 
 export function GeneratedOutput({ transformation, onContentChange }: GeneratedOutputProps) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [localContent, setLocalContent] = useState(transformation.content);
   const [copied, setCopied] = useState(false);
@@ -609,6 +630,14 @@ export function GeneratedOutput({ transformation, onContentChange }: GeneratedOu
     }
   };
 
+  const handleSendToTool = (tab: "plagiarism" | "humanize") => {
+    const text = toClipboardText(localContent, transformation.transformation_type);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("contentai_tool_prefill", text);
+    }
+    router.push(`/tools?tab=${tab}`);
+  };
+
   if (editing) {
     return (
       <EditorView
@@ -622,24 +651,54 @@ export function GeneratedOutput({ transformation, onContentChange }: GeneratedOu
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {/* Quick handoff: Scan Plagiarism */}
+        <button
+          type="button"
+          id="scan-plagiarism-output-btn"
+          onClick={() => handleSendToTool("plagiarism")}
+          className="btn-ghost text-xs flex items-center gap-1.5 text-[#69736C] hover:text-[#202522]"
+          title="Scan this generated output with the Plagiarism & AI Detector"
+        >
+          <svg className="w-3.5 h-3.5 text-[#315B46]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+          </svg>
+          Scan Plagiarism
+        </button>
+
+        {/* Quick handoff: Humanize */}
+        <button
+          type="button"
+          id="humanize-output-btn"
+          onClick={() => handleSendToTool("humanize")}
+          className="btn-ghost text-xs flex items-center gap-1.5 text-[#69736C] hover:text-[#202522]"
+          title="Rewrite this output using the AI Content Humanizer"
+        >
+          <svg className="w-3.5 h-3.5 text-[#315B46]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          Humanize
+        </button>
+
+        <div className="w-px h-4 bg-[#E4E8E3] mx-0.5 hidden sm:block" />
+
         {/* Copy plain text button */}
         <button
           type="button"
           id="copy-output-btn"
           onClick={handleCopy}
-          className="btn-ghost text-sm flex items-center gap-1.5"
+          className="btn-ghost text-xs flex items-center gap-1.5 text-[#69736C] hover:text-[#202522]"
         >
           {copied ? (
             <>
-              <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <svg className="w-3.5 h-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
               <span className="text-green-600 font-semibold">Copied!</span>
             </>
           ) : (
             <>
-              <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <svg className="w-3.5 h-3.5 text-[#69736C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
               </svg>
               Copy Text
@@ -647,17 +706,17 @@ export function GeneratedOutput({ transformation, onContentChange }: GeneratedOu
           )}
         </button>
 
-        {/* Edit in Word editor button */}
+        {/* Edit document button */}
         <button
           type="button"
           id="edit-output-btn"
           onClick={() => setEditing(true)}
-          className="btn-ghost text-sm flex items-center gap-1.5"
+          className="btn-ghost text-xs flex items-center gap-1.5 text-[#202522] font-medium"
         >
-          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <svg className="w-3.5 h-3.5 text-[#315B46]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
           </svg>
-          Edit in Word Editor
+          Edit document
         </button>
       </div>
       {smartRender(localContent, transformation.transformation_type)}

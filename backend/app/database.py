@@ -60,7 +60,7 @@ async def create_all_tables(settings: Settings | None = None) -> None:
     try:
         engine = _get_engine(settings)
         async with engine.begin() as conn:
-            from app.models import document, chunk, transformation, verification  # noqa: F401
+            from app.models import document, chunk, transformation, verification, user, activity  # noqa: F401
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables successfully created on %s", settings.database_url)
     except Exception as db_exc:
@@ -75,7 +75,7 @@ async def create_all_tables(settings: Settings | None = None) -> None:
             settings.database_url = "sqlite+aiosqlite:///./genai_platform.db"
             engine = _get_engine(settings)
             async with engine.begin() as conn:
-                from app.models import document, chunk, transformation, verification  # noqa: F401
+                from app.models import document, chunk, transformation, verification, user, activity  # noqa: F401
                 await conn.run_sync(Base.metadata.create_all)
             logger.info("SQLite fallback database successfully initialized.")
         else:

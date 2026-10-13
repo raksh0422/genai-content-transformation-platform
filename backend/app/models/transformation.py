@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, JSON
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,12 @@ class Transformation(Base):
     # Store list of source chunk metadata with scores & snippets for grounded citations
     source_chunks: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSON, nullable=True)
     
+    # Generation status: pending, processing, completed, failed
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="completed", index=True)
+    duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    error_category: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

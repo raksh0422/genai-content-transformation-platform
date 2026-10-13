@@ -189,34 +189,34 @@ function exportPDF(tf: TransformationResponse) {
           letter-spacing: 0.05em;
           margin-bottom: 24pt;
           padding-bottom: 12pt;
-          border-bottom: 2px solid #2563eb;
+          border-bottom: 2px solid #315B46;
           display: flex;
           justify-content: space-between;
         }
         h1 {
           font-size: 20pt;
           font-weight: 700;
-          color: #0f172a;
+          color: #202522;
           margin-bottom: 16pt;
           line-height: 1.3;
         }
         h2 {
           font-size: 13pt;
           font-weight: 700;
-          color: #1e293b;
+          color: #202522;
           margin: 22pt 0 10pt;
           padding-bottom: 4pt;
-          border-bottom: 1px solid #e2e8f0;
+          border-bottom: 1px solid #E4E8E3;
         }
         h3 {
           font-size: 11.5pt;
           font-weight: 600;
-          color: #1e293b;
+          color: #202522;
           margin: 16pt 0 6pt;
         }
         p {
           margin-bottom: 10pt;
-          color: #334155;
+          color: #202522;
           text-align: justify;
         }
         ul, ol {
@@ -224,19 +224,19 @@ function exportPDF(tf: TransformationResponse) {
         }
         li {
           margin-bottom: 4pt;
-          color: #334155;
+          color: #202522;
         }
         strong {
           font-weight: 600;
-          color: #0f172a;
+          color: #202522;
         }
         blockquote {
-          border-left: 3px solid #2563eb;
-          background-color: #f8fafc;
+          border-left: 3px solid #315B46;
+          background-color: #F8F9F7;
           padding: 10pt 14pt;
           margin: 12pt 0;
           border-radius: 0 6px 6px 0;
-          color: #1e3a8a;
+          color: #315B46;
           font-size: 10.5pt;
         }
         hr {
@@ -451,18 +451,18 @@ async function exportImage(tf: TransformationResponse, format: "png" | "jpeg") {
   const bodyHtml = markdownToPdfHtml(markdown);
 
   container.innerHTML = `
-    <div style="border-top: 6px solid #2563eb; padding-top: 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">
+    <div style="border-top: 6px solid #315B46; padding-top: 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E4E8E3; padding-bottom: 16px;">
       <div>
-        <div style="font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 1px;">ContentAI Intelligence Output</div>
-        <div style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px;">${title}</div>
+        <div style="font-size: 11px; font-weight: 700; color: #315B46; text-transform: uppercase; letter-spacing: 1px;">ContentAI Document Transformation</div>
+        <div style="font-size: 20px; font-weight: 700; color: #202522; margin-top: 4px;">${title}</div>
       </div>
-      <div style="font-size: 11px; color: #64748b;">${new Date().toLocaleDateString()}</div>
+      <div style="font-size: 11px; color: #69736C;">${new Date().toLocaleDateString()}</div>
     </div>
-    <div style="font-size: 14px; line-height: 1.7; color: #334155;">
+    <div style="font-size: 14px; line-height: 1.7; color: #202522;">
       ${bodyHtml}
     </div>
-    <div style="margin-top: 32px; pt: 16px; border-top: 1px solid #f1f5f9; text-align: right; font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-      Grounded RAG Transformation · ContentAI SaaS
+    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E4E8E3; text-align: right; font-size: 10px; font-weight: 600; color: #69736C; text-transform: uppercase; letter-spacing: 0.5px;">
+      Verified Document Transformation · ContentAI
     </div>
   `;
 
@@ -586,19 +586,19 @@ export function DownloadMenu({ transformation }: DownloadMenuProps) {
                 if (opt.id !== "docx" && opt.id !== "pptx" && opt.id !== "png" && opt.id !== "jpg") setOpen(false);
               }}
               disabled={downloading === opt.id}
-              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between group border-b border-gray-50 last:border-0"
+              className="w-full px-4 py-2.5 text-left hover:bg-[#F8F9F7] transition-colors flex items-center justify-between group border-b border-[#F0F2EF] last:border-0"
             >
               <div>
-                <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{opt.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{opt.description}</p>
+                <p className="text-sm font-medium text-[#202522] group-hover:text-[#315B46] transition-colors">{opt.label}</p>
+                <p className="text-xs text-[#69736C] mt-0.5">{opt.description}</p>
               </div>
               {downloading === opt.id ? (
-                <svg className="w-4 h-4 text-blue-600 animate-spin" viewBox="0 0 24 24" fill="none">
+                <svg className="w-4 h-4 text-[#315B46] animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
               ) : (
-                <svg className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <svg className="w-4 h-4 text-[#A0AAA3] group-hover:text-[#315B46] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               )}

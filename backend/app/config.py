@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_log_level: str = "INFO"
 
+    # Authentication & Security
+    secret_key: str = "contentai-production-super-secret-key-change-in-env-production"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+
     # Database (defaults to SQLite; overridable via DATABASE_URL env var for PostgreSQL/Neon/Supabase)
     database_url: str = "sqlite+aiosqlite:///./uploads/genai_platform.db"
 

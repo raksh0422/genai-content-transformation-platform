@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopNav } from "./TopNav";
@@ -12,7 +12,9 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleOpen = () => setUploadModalOpen(true);
@@ -20,15 +22,49 @@ export function AppShell({ children }: AppShellProps) {
     return () => window.removeEventListener("open-upload-modal", handleOpen);
   }, []);
 
-  return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900">
-      {/* Sidebar */}
-      <Sidebar onOpenUploadModal={() => setUploadModalOpen(true)} />
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
 
-      {/* Main Area */}
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register");
+  const isAdminPage = pathname.startsWith("/admin");
+
+  if (isAuthPage || isAdminPage) {
+    return <div className="min-h-screen bg-[#09090b] text-zinc-100">{children}</div>;
+  }
+
+  return (
+    <div className="flex min-h-screen bg-[#F8F9F7] text-[#202522]">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <Sidebar onOpenUploadModal={() => setUploadModalOpen(true)} />
+      </div>
+
+      {/* Mobile Sidebar Overlay Drawer */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-fade-in">
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative z-50 w-64 bg-white h-full shadow-2xl animate-slide-up">
+            <Sidebar
+              onOpenUploadModal={() => {
+                setMobileSidebarOpen(false);
+                setUploadModalOpen(true);
+              }}
+              onCloseMobile={() => setMobileSidebarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <TopNav />
-        <main className="flex-1 p-6 lg:p-8 max-w-6xl w-full mx-auto animate-fade-in">
+        <TopNav onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
+        <main className="flex-1 p-5 sm:p-8 max-w-6xl w-full mx-auto animate-fade-in">
           {children}
         </main>
       </div>
@@ -36,27 +72,28 @@ export function AppShell({ children }: AppShellProps) {
       {/* Upload Modal */}
       {uploadModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative w-full max-w-md bg-white rounded-xl p-6 border border-gray-200 shadow-xl animate-slide-up">
-            {/* Close */}
+          <div className="relative w-full max-w-lg bg-white rounded-2xl p-6 sm:p-8 border border-[#E4E8E3] shadow-2xl animate-slide-up">
+            {/* Close Button */}
             <button
               type="button"
               id="close-upload-modal"
               onClick={() => setUploadModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors h-7 w-7 flex items-center justify-center rounded-lg hover:bg-gray-100"
+              className="absolute top-5 right-5 text-[#69736C] hover:text-[#202522] transition-colors h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[#F0F2EF]"
+              aria-label="Close dialog"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <div className="mb-5">
-              <h3 className="text-base font-semibold text-gray-900">Upload a document</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Supports PDF, DOCX, PPTX, and TXT files up to 50 MB.
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-[#202522]">Upload a Document</h3>
+              <p className="text-xs text-[#69736C] mt-1 leading-relaxed">
+                Add source files to your workspace. Supports PDF, Word (DOCX), and Plain Text (TXT) files up to 50 MB.
               </p>
             </div>
 
