@@ -27,8 +27,47 @@ async def lifespan(app: FastAPI):
     try:
         await create_all_tables(settings)
         logger.info("Database tables verified/created.")
+
+        # Proactively seed default admin and demo user if not already present
+        from app.database import get_db_session
+        from app.models.user import User
+        from app.core.security import hash_password
+        from sqlalchemy import select
+        from datetime import datetime, timezone
+
+        async with get_db_session(settings) as db:
+            admin_check = await db.execute(select(User).where(User.email == "admin@contentai.internal"))
+            if not admin_check.scalar_one_or_none():
+                admin_user = User(
+                    id="usr_admin_default",
+                    email="admin@contentai.internal",
+                    hashed_password=hash_password("AdminPass123!"),
+                    full_name="ContentAI Administrator",
+                    role="admin",
+                    is_active=True,
+                    created_at=datetime.now(timezone.utc),
+                    last_active_at=datetime.now(timezone.utc),
+                )
+                db.add(admin_user)
+                logger.info("Seeded default administrator: admin@contentai.internal")
+
+            jane_check = await db.execute(select(User).where(User.email == "jane@example.com"))
+            if not jane_check.scalar_one_or_none():
+                jane_user = User(
+                    id="usr_jane_default",
+                    email="jane@example.com",
+                    hashed_password=hash_password("UserPass123!"),
+                    full_name="Jane Doe",
+                    role="user",
+                    is_active=True,
+                    created_at=datetime.now(timezone.utc),
+                    last_active_at=datetime.now(timezone.utc),
+                )
+                db.add(jane_user)
+                logger.info("Seeded default demo user: jane@example.com")
+            await db.flush()
     except Exception as exc:
-        logger.error("Database initialisation failed: %s", exc)
+        logger.error("Database initialisation or seeding failed: %s", exc)
 
     yield
 
