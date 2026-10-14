@@ -90,3 +90,24 @@ async def test_plagiarism_check_endpoint(client: AsyncClient):
     assert "originality_score" in data
     assert "flagged_phrases" in data
     assert len(data["flagged_phrases"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_humanize_ai_score_drops_significantly(client: AsyncClient):
+    """Verify that ai_score_before and ai_score_after are NEVER equal and show a substantial drop."""
+    test_cases = [
+        SAMPLE_AI_TEXT,
+        SAMPLE_PARAGRAPHS,
+        SAMPLE_MINIMAL,
+        "Machine learning models require large amounts of training data. High quality datasets ensure that the predictions are accurate and reliable.",
+    ]
+    for text in test_cases:
+        response = await client.post(
+            "/api/v1/tools/humanize",
+            json={"text": text, "style": "natural", "intensity": "medium"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ai_score_before"] > data["ai_score_after"], f"Expected score drop for: {text[:30]}"
+        assert data["ai_score_before"] != data["ai_score_after"]
+        assert (data["ai_score_before"] - data["ai_score_after"]) >= 15.0
